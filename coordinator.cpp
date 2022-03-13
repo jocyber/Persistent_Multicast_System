@@ -110,6 +110,7 @@ void* thread_func(void* arg) {
 	}
 }
 
+//function that parses the packets and performs the action
 void handleRequest(int clientSock) {
     char message[BUFFSIZE]; 
     memset(message, '\0', BUFFSIZE);
