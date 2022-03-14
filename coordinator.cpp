@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <queue>
 #include <semaphore.h>
+#include <list>
 
 #define PORT 2004
 #define THREAD_COUNT 10
@@ -19,10 +20,18 @@ void errexit(const std::string message);
 void handleRequest(int clientSock);
 void* worker_thread(void* arg);
 
+//information on the participants in the multicast system
+typedef struct participant_info {
+    int port;
+    std::string ip_addr;
+} participant_info;
+
+//global data structures
 std::queue<int> global_queue;
 std::unordered_map<std::string, int> codes = {
     {"register", 1}, {"deregister", 2}
 };
+std::unordered_map<int, participant_info> client_table;
 
 sem_t sem_full;
 sem_t sem_empty;
@@ -113,6 +122,7 @@ void* thread_func(void* arg) {
 //function that parses the packets and performs the action
 void handleRequest(int clientSock) {
     char message[BUFFSIZE]; 
+    const std::string ack = "ACK", nack = "N_ACK";
     memset(message, '\0', BUFFSIZE);
 
     recv(clientSock, message, BUFFSIZE, 0);
@@ -124,18 +134,67 @@ void handleRequest(int clientSock) {
     for(unsigned int i = 0; message[i] != ' ' && message[i] != '\0'; ++i)
         command += message[i];
 
-    option = code[command];
+    option = codes[command];
 
+    //acknowledge the client
+    if(option != -1)
+        send(clientSock, ack.c_str(), sizeof(ack), 0);
+    else {
+        send(clientSock, nack.c_str(), sizeof(nack), 0);
+
+        if(close(clientSock) == -1)
+            std::cerr << "Error in closing the socket file descriptor.\n";
+
+        return;
+    }
+
+    //if command is defined
     try {
-        switch(option) {
-            case 1: //register
+        if(close(clientSock) == -1)
+            throw "Error in closing the socket file descriptor.";
 
+        std::string input(message);
+
+        switch(option) {
+            case 1: {//register
+                std::string parameter = "", ip_addr;
+                unsigned int i = 8, id, port_num;
+
+                unsigned short int turn = 1;
+
+                //parse id first, then port, then ip_address
+                while(i < input.length()) {
+                    for(input[i] != ' ' && i < input.length(); ++i)
+                        parameter += input[i];
+
+                    switch(turn) {
+                        case 1:
+                            id = std::stoi(parameter);
+                            break;
+                        case 2;
+                            port_num = std::stoi(parameter);
+                            break;
+                        case 3:
+                            ip_addr = parameter;
+                    }
+
+                    parameter.clear();
+                    turn++;
+                }
+
+                client_table[id].port = port_num;
+                client_table[id].ip_addr = ip_addr;
+                break;
+            }
+
+            case 2: //deregister
+                break;
         }
+    }
+    catch(const char *message) {
+        std::cerr << message << '\n';
     }
     catch(...) {
         std::cerr << "Unknown exception was thrown.\n";
     }
-
-    if(close(clientSock) == -1)
-        std::cerr << "Error in closing the socket file descriptor.\n";
 }
