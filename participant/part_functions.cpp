@@ -16,6 +16,11 @@ void* acceptMessages(void* args) {
 
             //output the multicast message to the file
             file << buffer;
+            file.close();
+            break; //only here for testing
         }
     }
+
+    //here for testing
+    pthread_exit(0);
 }

@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     struct sockaddr_in addr;
     memset((struct sockaddr*) &addr, '\0', sizeof(addr));
 
-    addr.sin_family = AF_INET;
+    addr.sin_family = AF_UNIX;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
 
@@ -37,8 +37,6 @@ int main(int argc, char* argv[]) {
     char buffer[BUFFSIZE];
     memset(buffer, '\0', BUFFSIZE);
 
-    //maybe add two sends here so the coordinator can record both file descriptors
-
     //thread A - accept input from the user
     while(true) {
         std::string input = "";
@@ -55,12 +53,11 @@ int main(int argc, char* argv[]) {
         recv(sockfd[0], buffer, BUFFSIZE, 0);
         std::string parse(buffer);
 
-        if(parse.compare("N_ACK") == 0) {
+        if(parse.compare("N_ACK") == 0)
             std::cerr << "Unrecognized command.\n";
-            continue;
-        }
 
         memset(buffer, '\0', BUFFSIZE);
+        //close(sockfd[0]);
     }
 
     return EXIT_SUCCESS;

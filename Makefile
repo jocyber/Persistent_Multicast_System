@@ -2,17 +2,19 @@ FLAGS := -Wall -pedantic-errors -pthread -g
 CLIENT := participant
 SERV := coordinator
 
-all:
-	participant/$(CLIENT) $(SERV)
+all: $(CLIENT) $(SERV)
 
-%: %.cpp $(CLIENT)/part_functions.cpp
-	g++ $(FLAGS) $^ -o $@	
+$(CLIENT): $(CLIENT)/$(CLIENT).cpp $(CLIENT)/part_functions.cpp
+	g++ $(FLAGS) $^ -o part	
+
+$(SERV): $(SERV).cpp
+	g++ $(FLAGS) $^ -o coor	
 
 clean:
-	rm -f $(CLIENT) $(SERV)
+	rm -f part coor
 
 serv:
-	./$(SERV)
+	./coor
 
 part: 
-	./$(CLIENT)
+	./part

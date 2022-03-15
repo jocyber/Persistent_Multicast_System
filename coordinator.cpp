@@ -65,15 +65,21 @@ int main(int argc, char* argv[])
      //thread waits for connection, parses message, performs the necessary action, then closes the connection.
     for(unsigned int i = 0; i < THREAD_COUNT; ++i)
         pthread_create(&pool[i], NULL, worker_thread, NULL);
-
+        
     //accept oncoming connections
     while(true) {  
         try {
             sem_wait(&sem_full);
 
-            int clientfd;
+            int clientfd, clientfd2;
+
+            //for thread A
             if((clientfd = accept(sockfd, 0, 0)) == -1)
-                throw "Could not accept the oncoming connection.";
+                throw "Could not accept the first oncoming connection.";
+
+            //for thread B
+            if((clientfd2 = accept(sockfd, 0, 0)) == -1)
+                throw "Could not accept the second oncoming connection.";
 
             //when connection is received, push the file descriptor to a global queue that the worker threads read from
             pthread_mutex_lock(&mutex);
@@ -99,7 +105,7 @@ void errexit(const std::string message) {
 
 //wait for work to be done on the global queue
 //thread pool is a bounded buffer problem, so use 2 semaphores and a mutex lock to synchronize the work
-void* thread_func(void* arg) {
+void* worker_thread(void* arg) {
 	while(true) {
 		sem_wait(&sem_empty);
         int clientSock = -1;
