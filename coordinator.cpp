@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     addr.sin_port = htons(PORT);
     addr.sin_addr.s_addr = INADDR_ANY;
 
-    if(bind(sockfd, (struct sockaddr_in *) &addr, sizeof(addr)) == -1)
+    if(bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)) == -1)
         errexit("Could not bind the socket to the port " + PORT);
 
     listen(sockfd, SOMAXCONN);
@@ -164,14 +164,14 @@ void handleRequest(int clientSock) {
 
                 //parse id first, then port, then ip_address
                 while(i < input.length()) {
-                    for(input[i] != ' ' && i < input.length(); ++i)
+                    for(;input[i] != ' ' && i < input.length(); ++i)
                         parameter += input[i];
 
                     switch(turn) {
                         case 1:
                             id = std::stoi(parameter);
                             break;
-                        case 2;
+                        case 2:
                             port_num = std::stoi(parameter);
                             break;
                         case 3:

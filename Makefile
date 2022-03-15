@@ -3,9 +3,9 @@ CLIENT := participant
 SERV := coordinator
 
 all:
-	$(CLIENT) $(SERV)
+	participant/$(CLIENT) $(SERV)
 
-%: %.cpp
+%: %.cpp $(CLIENT)/part_functions.cpp
 	g++ $(FLAGS) $^ -o $@	
 
 clean:
