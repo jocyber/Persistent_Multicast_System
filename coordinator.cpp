@@ -12,7 +12,6 @@
 #include <semaphore.h>
 #include <list>
 
-#define PORT 2004
 #define THREAD_COUNT 10
 #define BUFFSIZE 1000
 
@@ -40,7 +39,13 @@ pthread_mutex_t mutex;
 int main(int argc, char* argv[]) 
 {
     int sockfd;
-    const std::string config_file(argv[1]);
+    const std::string configFile(argv[1]);
+
+    // parse config file
+    std::ifstream file(configFile);
+    int port;
+    int timeToLive;
+    file >> port >> timeToLive;
 
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
         errexit("Failed to create the socket.");
@@ -49,11 +54,11 @@ int main(int argc, char* argv[])
     memset((struct sockaddr_in *) &addr, '\0', sizeof(addr));
 
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
+    addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
 
     if(bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)) == -1)
-        errexit("Could not bind the socket to the port " + PORT);
+        errexit("Could not bind the socket to the port " + port);
 
     listen(sockfd, SOMAXCONN);
 
@@ -78,8 +83,11 @@ int main(int argc, char* argv[])
                 throw "Could not accept the first oncoming connection.";
 
             //for thread B
+            //server should be sending a request to thread B in the REGISTER method
+            /*
             if((clientfd2 = accept(sockfd, 0, 0)) == -1)
                 throw "Could not accept the second oncoming connection.";
+            */
 
             //when connection is received, push the file descriptor to a global queue that the worker threads read from
             pthread_mutex_lock(&mutex);

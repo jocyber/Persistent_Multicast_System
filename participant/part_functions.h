@@ -18,9 +18,17 @@
 struct Parameters {
     int sock;
     std::string file;
+    int port;
+};
+
+struct RegisterData {
+    int ID;
+    std::string IP;
+    int port;
 };
 
 //prototypes
 void* acceptMessages(void* args);
+void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args);
 
 #endif
