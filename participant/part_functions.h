@@ -30,5 +30,6 @@ struct RegisterData {
 //prototypes
 void* acceptMessages(void* args);
 void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args);
+std::string getIP(void);
 
 #endif
