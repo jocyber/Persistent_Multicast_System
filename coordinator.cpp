@@ -71,6 +71,7 @@ int main(int argc, char* argv[])
     for(unsigned int i = 0; i < THREAD_COUNT; ++i)
         pthread_create(&pool[i], NULL, worker_thread, NULL);
         
+        
     //accept oncoming connections
     while(true) {  
         try {
@@ -84,10 +85,12 @@ int main(int argc, char* argv[])
 
             //for thread B
             //server should be sending a request to thread B in the REGISTER method
-            /*
+            
             if((clientfd2 = accept(sockfd, 0, 0)) == -1)
                 throw "Could not accept the second oncoming connection.";
-            */
+            
+            
+            
 
             //when connection is received, push the file descriptor to a global queue that the worker threads read from
             pthread_mutex_lock(&mutex);
@@ -132,6 +135,7 @@ void* worker_thread(void* arg) {
 		sem_post(&sem_full);
 	}
 }
+
 
 //function that parses the packets and performs the action
 void handleRequest(int clientSock) {
@@ -201,8 +205,9 @@ void handleRequest(int clientSock) {
                 break;
             }
 
-            case 2: //deregister
+            case 2:  {//deregister
                 break;
+            }
         }
     }
     catch(const char *message) {

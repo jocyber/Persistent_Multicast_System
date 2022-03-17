@@ -60,7 +60,8 @@ void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, s
     struct hostent *host_entry;
     gethostname(host, sizeof(host));
     host_entry = gethostbyname(host);
-    std::string ip(inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[0])));
+    std::string ip = getIP();
+    //std::string ip(inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[0])));
 
     // create data to send
     struct RegisterData data;
@@ -70,4 +71,19 @@ void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, s
     std::cout << "Id: " << id << " IP: " << ip << " Port: " << port << "\n";
     // send data
 
+}
+
+std::string getIP(void) {
+    FILE *fpntr = popen("hostname -I", "r");
+
+    char buffer[20];
+    //get first row
+    fgets(buffer, 20, fpntr);
+    std::string output(buffer), IP = "";
+
+    for(unsigned int i = 0; output[i] != '\n' && output[i] != '\0'; ++i)
+        IP += output[i];
+
+    fclose(fpntr);
+    return IP;
 }

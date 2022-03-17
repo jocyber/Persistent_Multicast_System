@@ -70,6 +70,7 @@ int main(int argc, char* argv[]) {
                 registerParticipant(input, sockfd[0], id, tid, args);
                 break;
             case 2:
+                // deregister
                 break;
             default:
                 std::cerr << "Command not known.\n";
