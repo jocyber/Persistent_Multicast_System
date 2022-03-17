@@ -31,10 +31,12 @@ std::unordered_map<std::string, int> codes = {
     {"register", 1}, {"deregister", 2}
 };
 std::unordered_map<int, participant_info> client_table;
+std::queue<int> message_queue;
 
 sem_t sem_full;
 sem_t sem_empty;
 pthread_mutex_t mutex;
+pthread_mutex_t message_mutex;
 
 int main(int argc, char* argv[]) 
 {
@@ -71,7 +73,6 @@ int main(int argc, char* argv[])
     for(unsigned int i = 0; i < THREAD_COUNT; ++i)
         pthread_create(&pool[i], NULL, worker_thread, NULL);
         
-        
     //accept oncoming connections
     while(true) {  
         try {
@@ -85,12 +86,10 @@ int main(int argc, char* argv[])
 
             //for thread B
             //server should be sending a request to thread B in the REGISTER method
-            
+            /*
             if((clientfd2 = accept(sockfd, 0, 0)) == -1)
                 throw "Could not accept the second oncoming connection.";
-            
-            
-            
+            */
 
             //when connection is received, push the file descriptor to a global queue that the worker threads read from
             pthread_mutex_lock(&mutex);
@@ -136,7 +135,6 @@ void* worker_thread(void* arg) {
 	}
 }
 
-
 //function that parses the packets and performs the action
 void handleRequest(int clientSock) {
     char message[BUFFSIZE]; 
@@ -144,6 +142,7 @@ void handleRequest(int clientSock) {
     memset(message, '\0', BUFFSIZE);
 
     recv(clientSock, message, BUFFSIZE, 0);
+    std::cout << message << '\n';
 
     int option = -1;
     std::string command = "";
@@ -153,18 +152,6 @@ void handleRequest(int clientSock) {
         command += message[i];
 
     option = codes[command];
-
-    //acknowledge the client
-    if(option != -1)
-        send(clientSock, ack.c_str(), sizeof(ack), 0);
-    else {
-        send(clientSock, nack.c_str(), sizeof(nack), 0);
-
-        if(close(clientSock) == -1)
-            std::cerr << "Error in closing the socket file descriptor.\n";
-
-        return;
-    }
 
     //if command is defined
     try {
@@ -176,7 +163,7 @@ void handleRequest(int clientSock) {
         switch(option) {
             case 1: {//register
                 std::string parameter = "", ip_addr;
-                unsigned int i = 8, id, port_num;
+                unsigned int i = 9, id, port_num;
 
                 unsigned short int turn = 1;
 
@@ -185,12 +172,14 @@ void handleRequest(int clientSock) {
                     for(;input[i] != ' ' && i < input.length(); ++i)
                         parameter += input[i];
 
+                    std::cout << parameter << '\n';
+
                     switch(turn) {
                         case 1:
-                            id = std::stoi(parameter);
+                            port_num = std::stoi(parameter);
                             break;
                         case 2:
-                            port_num = std::stoi(parameter);
+                            id = std::stoi(parameter);
                             break;
                         case 3:
                             ip_addr = parameter;
@@ -198,20 +187,45 @@ void handleRequest(int clientSock) {
 
                     parameter.clear();
                     turn++;
+                    i++;
                 }
 
                 client_table[id].port = port_num;
                 client_table[id].ip_addr = ip_addr;
+
+                // connect to thread B in the participant
+                int sockfd2;
+                if((sockfd2 = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+                    errexit("Failed to create the socket for thread B.");
+
+                struct sockaddr_in addr;
+                memset((struct sockaddr_in *) &addr, '\0', sizeof(addr));
+
+                addr.sin_family = AF_INET;
+                addr.sin_port = htons(port_num);
+                addr.sin_addr.s_addr = INADDR_ANY;
+
+                //send it back to the IP address it came from. If participants are on the same machine,
+                //it will differentiate between them based on the port number
+                if(connect(sockfd2, (struct sockaddr*) &addr, sizeof(addr)) == -1)
+                    errexit("Could not connect to remote host on thread B.");
+
+                //store sockfd2 in some global queue
+                pthread_mutex_lock(&message_mutex);
+                message_queue.push(sockfd2);
+                pthread_mutex_unlock(&message_mutex);
                 break;
             }
 
-            case 2:  {//deregister
+            case 2: //deregister
                 break;
-            }
         }
     }
     catch(const char *message) {
         std::cerr << message << '\n';
+    }
+    catch(const std::exception &ex) {
+        std::cerr << ex.what() << '\n';
     }
     catch(...) {
         std::cerr << "Unknown exception was thrown.\n";
