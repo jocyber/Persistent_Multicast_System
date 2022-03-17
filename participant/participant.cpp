@@ -74,22 +74,7 @@ int main(int argc, char* argv[]) {
             default:
                 std::cerr << "Command not known.\n";
         }
-/*
-        if(send(sockfd[0], input.c_str(), input.length(), 0) == -1) {
-            std::cerr << "Failed to send data through the socket.\n";
-            continue;
-       }
-*/
-/*
-        //receive acknowledgement from the coordinator
-        recv(sockfd[0], buffer, BUFFSIZE, 0);
-        std::string parse(buffer);
 
-        if(parse.compare("N_ACK") == 0)
-            std::cerr << "Unrecognized command.\n";
-
-        memset(buffer, '\0', BUFFSIZE);
-*/
         close(sockfd[0]);
     }
 

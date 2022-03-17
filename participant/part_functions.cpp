@@ -64,13 +64,11 @@ void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, s
     //std::string ip(inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[0])));
 
     // create data to send
-    struct RegisterData data;
-    data.ID = id;
-    data.IP = ip;
-    data.port = port;
     std::cout << "Id: " << id << " IP: " << ip << " Port: " << port << "\n";
-    // send data
 
+    std::string message = input + " " + std::to_string(id) + " " + ip;
+    send(sock, message.c_str(), message.length(), 0);
+    // send data
 }
 
 std::string getIP(void) {
