@@ -74,15 +74,16 @@ void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, s
 }
 
 std::string getIP(void) {
-    FILE *fpntr = popen("ifconfig | grep \"inet \"", "r");
+    FILE *fpntr = popen("hostname -I", "r");
 
-    char buffer[150];
+    char buffer[20];
     //get first row
-    fgets(buffer, 150, fpntr);
-    std::string output(buffer), IP;
+    fgets(buffer, 20, fpntr);
+    std::string output(buffer), IP = "";
 
-    IP = output.substr(13, 26);
+    for(unsigned int i = 0; output[i] != '\n' && output[i] != '\0'; ++i)
+        IP += output[i];
+
     fclose(fpntr);
-    
     return IP;
 }
