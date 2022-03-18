@@ -14,7 +14,7 @@ clean:
 	rm -f part coor
 
 serv:
-	./coor
+	./coor coor_config.txt
 
 part: 
-	./part
+	./part part_config.txt

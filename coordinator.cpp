@@ -26,12 +26,12 @@ typedef struct participant_info {
 } participant_info;
 
 //global data structures
-std::queue<int> global_queue;
-std::unordered_map<std::string, int> codes = {
+std::queue<int> global_queue;//for working threads
+std::unordered_map<std::string, int> codes = {//for switching on command
     {"register", 1}, {"deregister", 2}
 };
-std::unordered_map<int, participant_info> client_table;
-std::queue<int> message_queue;
+std::unordered_map<int, participant_info> client_table;//for storing participant information
+std::queue<int> message_queue;//for storing multicast messages
 
 sem_t sem_full;
 sem_t sem_empty;
@@ -40,13 +40,16 @@ pthread_mutex_t message_mutex;
 
 int main(int argc, char* argv[]) 
 {
-    int sockfd;
+    if(argc != 2) {
+        std::cerr << "Incorrect executable format. Must be {./file [config_file]}\n";
+        exit(EXIT_FAILURE);
+    }
+
     const std::string configFile(argv[1]);
 
     // parse config file
     std::ifstream file(configFile);
-    int port;
-    int timeToLive;
+    int port, sockfd, timeToLive;
     file >> port >> timeToLive;
 
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
@@ -77,19 +80,11 @@ int main(int argc, char* argv[])
     while(true) {  
         try {
             sem_wait(&sem_full);
-
-            int clientfd, clientfd2;
+            int clientfd;
 
             //for thread A
             if((clientfd = accept(sockfd, 0, 0)) == -1)
                 throw "Could not accept the first oncoming connection.";
-
-            //for thread B
-            //server should be sending a request to thread B in the REGISTER method
-            /*
-            if((clientfd2 = accept(sockfd, 0, 0)) == -1)
-                throw "Could not accept the second oncoming connection.";
-            */
 
             //when connection is received, push the file descriptor to a global queue that the worker threads read from
             pthread_mutex_lock(&mutex);
@@ -138,7 +133,7 @@ void* worker_thread(void* arg) {
 //function that parses the packets and performs the action
 void handleRequest(int clientSock) {
     char message[BUFFSIZE]; 
-    const std::string ack = "ACK", nack = "N_ACK";
+    //const std::string ack = "ACK", nack = "N_ACK";
     memset(message, '\0', BUFFSIZE);
 
     recv(clientSock, message, BUFFSIZE, 0);
