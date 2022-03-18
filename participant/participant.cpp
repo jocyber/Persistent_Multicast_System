@@ -65,15 +65,12 @@ int main(int argc, char* argv[]) {
         switch(option) {
             case 1: // register
                 registerParticipant(input, sockfd, id, tid, args);
-<<<<<<< HEAD
                 break;
             case 2: //deregister
                 deregisterParticipant(input, sockfd, id,tid, args);
                 break;
             case 3: //disconnect
                 disconnectParticipant(input, sockfd, id,tid, args);
-=======
->>>>>>> fa7019078ccd50919f86c939119de8b443655e83
                 break;
             case 4: //reconnect
                 reconnectParticipant(input, sockfd, id,tid, args);
