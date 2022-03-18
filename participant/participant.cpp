@@ -10,25 +10,23 @@ void errexit(const std::string message) {
 }
 
 int main(int argc, char* argv[]) {
-    int sockfd[2];
+
+    if(argc != 2) {
+        std::cerr << "Incorrect executable format. Must be {./file [config_file]}\n";
+        exit(EXIT_FAILURE);
+    }
+
     const std::string configFile(argv[1]);
 
     // parse config file
     std::ifstream file(configFile);
-    int id;  
-    std::string logFile;
-    std::string ipCoordinator;
-    int portCoordinator;
+    int id, portCoordinator, sockfd;  
+    std::string logFile, ipCoordinator;
+
     file >> id >> logFile >> ipCoordinator >> portCoordinator;
     std::cout << "ID: " << id << " logFile: " << logFile << " ip: " << ipCoordinator << " port: " << portCoordinator << "\n";
 
-    //sockfd[0] for thread A, sockfd[1] for thread B
-    /*
-    if(socketpair(AF_UNIX, SOCK_STREAM, 0, sockfd) == -1)
-        errexit("Could not create socket.");
-    */
-    sockfd[0] = socket(AF_INET, SOCK_STREAM, 0);
-    sockfd[1] = socket(AF_INET, SOCK_STREAM, 0);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in addr;
     memset((struct sockaddr*) &addr, '\0', sizeof(addr));
 
@@ -37,7 +35,6 @@ int main(int argc, char* argv[]) {
     addr.sin_addr.s_addr = INADDR_ANY;
 
     struct Parameters args;
-    args.sock = sockfd[1];
     args.file = logFile; // pass in logFile to write to
 
     pthread_t tid;//thread B, accepts oncoming messages from the coordinator
@@ -62,20 +59,29 @@ int main(int argc, char* argv[]) {
         option = codes[command];
 
         // connect to the coordinator
-        if(connect(sockfd[0], (struct sockaddr*) &addr, sizeof(addr)) == -1)
+        if(connect(sockfd, (struct sockaddr*) &addr, sizeof(addr)) == -1)
             errexit("Could not connect to remote host.");
 
         switch(option) {
             case 1: // register
-                registerParticipant(input, sockfd[0], id, tid, args);
+                registerParticipant(input, sockfd, id, tid, args);
                 break;
-            case 2:
+            case 2: //deregister
+                deregisterParticipant(input, sockfd, id,tid, args);
                 break;
+            case 3: //disconnect
+                disconnectParticipant(input, sockfd, id,tid, args);
+                break;
+            case 4: //reconnect
+                reconnectParticipant(input, sockfd, id,tid, args);
+                break;
+            case 5: //msend
+                msendParticipant(input, sockfd, id,tid, args);
             default:
                 std::cerr << "Command not known.\n";
         }
 
-        close(sockfd[0]);
+        close(sockfd);
     }
 
     return EXIT_SUCCESS;

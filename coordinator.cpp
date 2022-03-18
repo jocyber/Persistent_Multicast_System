@@ -25,13 +25,14 @@ typedef struct participant_info {
     std::string ip_addr;
 } participant_info;
 
+
 //global data structures
-std::queue<int> global_queue;
-std::unordered_map<std::string, int> codes = {
-    {"register", 1}, {"deregister", 2}
+std::queue<int> global_queue;//for working threads
+std::unordered_map<std::string, int> codes = {//for switching on command
+    {"register", 1}, {"deregister", 2}, {"disconnect", 3}, {"reconnect", 4}, {"msend", 5}
 };
-std::unordered_map<int, participant_info> client_table;
-std::queue<int> message_queue;
+std::unordered_map<int, participant_info> client_table; //for storing participant information
+std::queue<int> message_queue; //for storing multicast messages
 
 sem_t sem_full;
 sem_t sem_empty;
@@ -40,13 +41,16 @@ pthread_mutex_t message_mutex;
 
 int main(int argc, char* argv[]) 
 {
-    int sockfd;
+    if(argc != 2) {
+        std::cerr << "Incorrect executable format. Must be {./file [config_file]}\n";
+        exit(EXIT_FAILURE);
+    }
+
     const std::string configFile(argv[1]);
 
     // parse config file
     std::ifstream file(configFile);
-    int port;
-    int timeToLive;
+    int port, sockfd, timeToLive;
     file >> port >> timeToLive;
 
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
@@ -77,19 +81,11 @@ int main(int argc, char* argv[])
     while(true) {  
         try {
             sem_wait(&sem_full);
-
-            int clientfd, clientfd2;
+            int clientfd;
 
             //for thread A
             if((clientfd = accept(sockfd, 0, 0)) == -1)
                 throw "Could not accept the first oncoming connection.";
-
-            //for thread B
-            //server should be sending a request to thread B in the REGISTER method
-            /*
-            if((clientfd2 = accept(sockfd, 0, 0)) == -1)
-                throw "Could not accept the second oncoming connection.";
-            */
 
             //when connection is received, push the file descriptor to a global queue that the worker threads read from
             pthread_mutex_lock(&mutex);
@@ -138,7 +134,7 @@ void* worker_thread(void* arg) {
 //function that parses the packets and performs the action
 void handleRequest(int clientSock) {
     char message[BUFFSIZE]; 
-    const std::string ack = "ACK", nack = "N_ACK";
+    //const std::string ack = "ACK", nack = "N_ACK";
     memset(message, '\0', BUFFSIZE);
 
     recv(clientSock, message, BUFFSIZE, 0);
@@ -217,8 +213,68 @@ void handleRequest(int clientSock) {
                 break;
             }
 
-            case 2: //deregister
+            case 2: { //deregister
+                
+                std::string parameter = "";
+                unsigned int i = 9, id;
+
+                unsigned short int turn = 1;
+
+                //parse id first, then port, then ip_address
+                while(i < input.length()) {
+                    for(;input[i] != ' ' && i < input.length(); ++i)
+                        parameter += input[i];
+
+                    std::cout << parameter << '\n';
+
+                    switch(turn) {
+                        case 2:
+                            id = std::stoi(parameter);
+                            break;
+                    }
+                    
+                    parameter.clear();
+                    turn++;
+                    i++;
+                }
+
+                client_table.erase (id);
+                
+                // connect to thread B in the participant
+                int sockfd2;
+                if((sockfd2 = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+                    errexit("Failed to create the socket for thread B.");
+
+                struct sockaddr_in addr;
+                memset((struct sockaddr_in *) &addr, '\0', sizeof(addr));
+
+                addr.sin_family = AF_INET;
+                addr.sin_port = htons(client_table[sockfd2].port);
+                addr.sin_addr.s_addr = INADDR_ANY;
+
+                //send it back to the IP address it came from. If participants are on the same machine,
+                //it will differentiate between them based on the port number
+                if(connect(sockfd2, (struct sockaddr*) &addr, sizeof(addr)) == -1)
+                    errexit("Could not connect to remote host on thread B.");
+
+                //store sockfd2 in some global queue
+                pthread_mutex_lock(&message_mutex);
+                message_queue.push(sockfd2);
+                pthread_mutex_unlock(&message_mutex);
+                
                 break;
+            }
+            
+          case 3 : { //disconnect
+            break;
+          }
+          
+          case 4 : { //reconnect
+            break;      
+          }
+          case 5 : { //msend
+            break;
+          }
         }
     }
     catch(const char *message) {

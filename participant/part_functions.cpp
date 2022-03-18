@@ -3,12 +3,17 @@
 #include <netdb.h>
 
 void* acceptMessages(void* args) {
-    int sockfd = ((struct Parameters*)args)->sock;
+    int sockfd;
     const std::string logFile = ((struct Parameters*)args)->file;
     int port = ((struct Parameters*)args)->port;
 
     char buffer[BUFFSIZE];
     std::fstream file(logFile, std::ios::app);//append to the file
+
+    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        std::cerr << "Could not create socket for thread B.\n";
+        pthread_exit(0);
+    }
 
     struct sockaddr_in addr;
     memset((struct sockaddr_in *) &addr, '\0', sizeof(addr));
@@ -20,7 +25,7 @@ void* acceptMessages(void* args) {
     if(bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)) == -1)
         std::cerr << "Could not bind the socket to the port " << port;
 
-    listen(sockfd, SOMAXCONN);
+    listen(sockfd, 1);
 
     // accept connection from server
     int sockCoordinator;
@@ -55,14 +60,7 @@ void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, s
     // create threadB
     pthread_create(&tid, NULL, acceptMessages, (void*) &args);
     
-    // get host IP
-    char host[256];
-    struct hostent *host_entry;
-    gethostname(host, sizeof(host));
-    host_entry = gethostbyname(host);
     std::string ip = getIP();
-    //std::string ip(inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[0])));
-
     // create data to send
     std::cout << "Id: " << id << " IP: " << ip << " Port: " << port << "\n";
 
@@ -84,4 +82,21 @@ std::string getIP(void) {
 
     fclose(fpntr);
     return IP;
+}
+
+void deregisterParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
+    // create threadB
+    pthread_create(&tid, NULL, acceptMessages, (void*) &args);
+    
+    std::cout << "Participant Id: " << id << " deregister" << "\n";
+    
+    std::string message = input + " " + std::to_string(id) + " " + "participant";
+    send(sock, message.c_str(), message.length(), 0);
+
+}
+void disconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
+}
+void reconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args){
+}
+void msendParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args){
 }
