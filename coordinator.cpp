@@ -29,10 +29,17 @@ typedef struct participant_info {
 //global data structures
 std::queue<int> global_queue;//for working threads
 std::unordered_map<std::string, int> codes = {//for switching on command
+<<<<<<< HEAD
     {"register", 1}, {"deregister", 2}, {"disconnect", 3}, {"reconnect", 4}, {"msend", 5}
 };
 std::unordered_map<int, participant_info> client_table; //for storing participant information
 std::queue<int> message_queue; //for storing multicast messages
+=======
+    {"register", 1}, {"deregister", 2}
+};
+std::unordered_map<int, participant_info> client_table;//for storing participant information
+std::queue<int> message_queue;//for storing multicast messages
+>>>>>>> fa7019078ccd50919f86c939119de8b443655e83
 
 sem_t sem_full;
 sem_t sem_empty;
