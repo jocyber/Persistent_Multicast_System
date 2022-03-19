@@ -23,6 +23,9 @@ void* acceptMessages(void* args) {
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
 
+    int opt = 1;
+    setsockopt(sockfd, IPPROTO_TCP, SO_REUSEADDR, &opt, sizeof(opt));
+
     if(bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
         std::cerr << "Could not bind the socket to the port " << port;
         pthread_exit(0);
@@ -45,9 +48,13 @@ void* acceptMessages(void* args) {
             recv(sockCoordinator, buffer, BUFFSIZE, 0);
 
             if(strcmp(buffer, "CLOSE") == 0) {
-                close(sockCoordinator);
-                file.close();
+                int opt = 0;
+                setsockopt(sockfd, IPPROTO_TCP, SO_REUSEADDR, &opt, sizeof(opt));
 
+                close(sockfd);
+                close(sockCoordinator);
+
+                file.close();
                 pthread_exit(0);
             }
 
