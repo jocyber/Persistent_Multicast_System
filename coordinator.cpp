@@ -233,6 +233,7 @@ void handleRequest(int clientSock) {
             break;
           }
         } // switch
+
         // close client socket
         close(clientSock);
     } // try
