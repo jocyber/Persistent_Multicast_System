@@ -9,6 +9,8 @@ void errexit(const std::string message) {
     exit(EXIT_FAILURE);
 }
 
+int connectToCoor(int portCoordinator);
+
 int main(int argc, char* argv[]) {
 
     if(argc != 2) {
@@ -20,19 +22,11 @@ int main(int argc, char* argv[]) {
 
     // parse config file
     std::ifstream file(configFile);
-    int id, portCoordinator, sockfd;  
+    int id, portCoordinator;  
     std::string logFile, ipCoordinator;
 
     file >> id >> logFile >> ipCoordinator >> portCoordinator;
     std::cout << "ID: " << id << " logFile: " << logFile << " ip: " << ipCoordinator << " port: " << portCoordinator << "\n";
-
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in addr;
-    memset((struct sockaddr*) &addr, '\0', sizeof(addr));
-
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(portCoordinator);
-    addr.sin_addr.s_addr = INADDR_ANY;
 
     struct Parameters args;
     args.file = logFile; // pass in logFile to write to
@@ -58,25 +52,33 @@ int main(int argc, char* argv[]) {
             command += input[i];
         option = codes[command];
 
-        // connect to the coordinator
-        if(connect(sockfd, (struct sockaddr*) &addr, sizeof(addr)) == -1)
-            errexit("Could not connect to remote host.");
+        int sockfd = connectToCoor(portCoordinator);//connect to remote host
 
         switch(option) {
-            case 1: // register
+            case 1:// register
                 registerParticipant(input, sockfd, id, tid, args);
                 break;
-            case 2: //deregister
-                deregisterParticipant(input, sockfd, id,tid, args);
+            case 2: { //deregister
+                int status = pthread_cancel(tid);
+                if(status == -1) {
+                    std::cerr << "Unable to cancel thread B.\n";
+                    break;
+                }
+
+                //send if to make operation on coordinator more efficient
+                const std::string message = input + " " + std::to_string(id);
+
+                if(send(sockfd, message.c_str(), message.length(), 0) == -1)
+                    std::cerr << "Unable to send command 'deregister' to the coordinator.\n";
+
                 break;
+            }
             case 3: //disconnect
-                disconnectParticipant(input, sockfd, id,tid, args);
                 break;
             case 4: //reconnect
-                reconnectParticipant(input, sockfd, id,tid, args);
                 break;
             case 5: //msend
-                msendParticipant(input, sockfd, id,tid, args);
+                break;
             default:
                 std::cerr << "Command not known.\n";
         }
@@ -85,4 +87,20 @@ int main(int argc, char* argv[]) {
     }
 
     return EXIT_SUCCESS;
+}
+
+int connectToCoor(int portCoordinator) {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in addr;
+    memset((struct sockaddr*) &addr, '\0', sizeof(addr));
+
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(portCoordinator);
+    addr.sin_addr.s_addr = INADDR_ANY;
+
+    // connect to the coordinator
+    if(connect(sockfd, (struct sockaddr*) &addr, sizeof(addr)) == -1)
+        errexit("Could not connect to remote host.");
+
+    return sockfd;
 }

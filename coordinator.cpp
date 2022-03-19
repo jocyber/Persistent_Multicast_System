@@ -19,15 +19,14 @@ void errexit(const std::string message);
 void handleRequest(int clientSock);
 void* worker_thread(void* arg);
 void printPartInfo();
-void registerParticipant(std::string input);
+void registerParticipant(const std::string &input);
 
 //information on the participants in the multicast system
-typedef struct participant_info {
-    int id;                                     // id number of participant
-    int port;                                   // port of threadB on participant
+typedef struct participant_info {                                  // id number of participant
+    int port, id;                                   // port of threadB on participant
     std::string ip_addr;                        // ip address of participant
     int threadBsocket;                          // file descriptor for threadB socket
-    bool online = true;                         // boolean if participant is online or offline
+    bool online = false;                         // boolean if participant is online or offline
     std::queue<int> participant_mailbox;        // mailbox to store messages when offline
 } participant_info;
 
@@ -35,7 +34,6 @@ typedef struct participant_info {
 //global data structures
 std::queue<int> global_queue;//for working threads
 std::unordered_map<std::string, int> codes = {//for switching on command
-
     {"register", 1}, {"deregister", 2}, {"disconnect", 3}, {"reconnect", 4}, {"msend", 5}
 };
 
@@ -158,9 +156,6 @@ void handleRequest(int clientSock) {
 
     //if command is defined
     try {
-        if(close(clientSock) == -1)
-            throw "Error in closing the socket file descriptor.";
-
         std::string input(message);
 
         switch(option) {
@@ -171,23 +166,28 @@ void handleRequest(int clientSock) {
             }
 
             case 2: { //deregister
-              
+                int id = std::stoi(input.substr(11, input.length()));//get id
+                client_table.erase(id);//remove participant from table
+
+                std::cout << "Participant with id " + std::to_string(id) + " has been removed.\n";
+
                 break;
             }
             
-            case 3 : { //disconnect
+            case 3: { //disconnect
                 break;
             }
             
-            case 4 : { //reconnect
+            case 4: { //reconnect
                 break;      
             }
-            case 5 : { //msend
+            case 5: { //msend
                 break;
             }
         }
 
-        close(clientSock);
+        if(close(clientSock) == -1)
+            throw "Error in closing the socket file descriptor.";
     } // try
     catch(const char *message) {
         std::cerr << message << '\n';
@@ -209,7 +209,6 @@ void printPartInfo() {
 
     for(const auto &i: client_table) {
         std::cout << "Client " << j << ":\n";
-        std::cout << "\tID: " << i.second.id << "\n";
         std::cout << "\tIP: " << i.second.ip_addr << "\n";
         std::cout << "\tPort: " << i.second.port << "\n";
         std::cout << "\tOnline: " << i.second.online << "\n";
@@ -218,7 +217,7 @@ void printPartInfo() {
     std::cout << "____________________________________________";
 }
 
-void registerParticipant(std::string input) {
+void registerParticipant(const std::string &input) {//return the id
     std::string parameter = "", ip_addr;
     unsigned int i = 9, id, port_num;
 
@@ -249,6 +248,7 @@ void registerParticipant(std::string input) {
     client_table[id].id = id;
     client_table[id].port = port_num;
     client_table[id].ip_addr = ip_addr;
+    client_table[id].online = true;
 
     // connect to thread B in the participant
     int sockfd2;

@@ -22,8 +22,10 @@ void* acceptMessages(void* args) {
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
 
-    if(bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)) == -1)
+    if(bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
         std::cerr << "Could not bind the socket to the port " << port;
+        pthread_exit(0);
+    }
 
     listen(sockfd, 1);
 
@@ -57,8 +59,13 @@ void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, s
     // get port number
     int port = std::stoi(input.substr(8, input.length()));
     args.port = port;
+    
     // create threadB
-    pthread_create(&tid, NULL, acceptMessages, (void*) &args);
+    int status = pthread_create(&tid, NULL, acceptMessages, (void*) &args);
+    if(status != 0) {
+        std::cerr << "Failed to create thread B.\n";
+        return;
+    }
     
     std::string ip = getIP();
     // create data to send
@@ -84,9 +91,6 @@ std::string getIP(void) {
     return IP;
 }
 
-void deregisterParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
-    ;
-}
 void disconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
     ;
 }
