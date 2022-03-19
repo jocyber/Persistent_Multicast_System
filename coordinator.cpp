@@ -27,7 +27,7 @@ typedef struct participant_info {                                  // id number 
     std::string ip_addr;                        // ip address of participant
     int threadBsocket;                          // file descriptor for threadB socket
     bool online = false;                         // boolean if participant is online or offline
-    std::queue<int> participant_mailbox;        // mailbox to store messages when offline
+    std::queue<std::string> participant_mailbox;        // mailbox to store messages when offline
 } participant_info;
 
 
@@ -190,6 +190,21 @@ void handleRequest(int clientSock) {
                 break;      
             }
             case 5: { //msend
+                //parse the message here:
+                const std::string multicast_message = input.substr(6, input.length());
+
+                for(auto &x : client_table) {
+                    if(x.second.online) {//if participant is online
+                        if(send(x.second.threadBsocket, multicast_message.c_str(), multicast_message.length(), 0) == -1) {
+                            std::cerr << "Failed to send multicast message to ID: " << x.first << '\n';
+                            break;
+                        }        
+                    }
+                    else {
+                        x.second.participant_mailbox.push(multicast_message);
+                    }
+                }
+
                 break;
             }
         }
