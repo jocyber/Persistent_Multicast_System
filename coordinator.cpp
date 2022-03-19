@@ -40,7 +40,6 @@ std::unordered_map<std::string, int> codes = {//for switching on command
 };
 
 std::unordered_map<int, participant_info> client_table;//for storing participant information
-std::queue<int> message_queue;//for storing multicast messages
 
 sem_t sem_full;
 sem_t sem_empty;
@@ -172,68 +171,22 @@ void handleRequest(int clientSock) {
             }
 
             case 2: { //deregister
-                
-                std::string parameter = "";
-                unsigned int i = 9, id;
-
-                unsigned short int turn = 1;
-
-                //parse id first, then port, then ip_address
-                while(i < input.length()) {
-                    for(;input[i] != ' ' && i < input.length(); ++i)
-                        parameter += input[i];
-
-
-                    switch(turn) {
-                        case 2:
-                            id = std::stoi(parameter);
-                            break;
-                    }
-                    
-                    parameter.clear();
-                    turn++;
-                    i++;
-                }
-
-                client_table.erase (id);
-                
-                // connect to thread B in the participant
-                int sockfd2;
-                if((sockfd2 = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-                    errexit("Failed to create the socket for thread B.");
-
-                struct sockaddr_in addr;
-                memset((struct sockaddr_in *) &addr, '\0', sizeof(addr));
-
-                addr.sin_family = AF_INET;
-                addr.sin_port = htons(client_table[sockfd2].port);
-                addr.sin_addr.s_addr = INADDR_ANY;
-
-                //send it back to the IP address it came from. If participants are on the same machine,
-                //it will differentiate between them based on the port number
-                if(connect(sockfd2, (struct sockaddr*) &addr, sizeof(addr)) == -1)
-                    errexit("Could not connect to remote host on thread B.");
-
-                //store sockfd2 in some global queue
-                pthread_mutex_lock(&message_mutex);
-                message_queue.push(sockfd2);
-                pthread_mutex_unlock(&message_mutex);
-                
+              
                 break;
             }
             
-          case 3 : { //disconnect
-            break;
-          }
-          
-          case 4 : { //reconnect
-            break;      
-          }
-          case 5 : { //msend
-            break;
-          }
-        } // switch
-        // close client socket
+            case 3 : { //disconnect
+                break;
+            }
+            
+            case 4 : { //reconnect
+                break;      
+            }
+            case 5 : { //msend
+                break;
+            }
+        }
+
         close(clientSock);
     } // try
     catch(const char *message) {
@@ -253,7 +206,8 @@ void printPartInfo() {
     std::cout << "\n";
     std::cout << "Client Table:\n";
     std::cout << "____________________________________________\n";
-    for(auto i: client_table) {
+
+    for(const auto &i: client_table) {
         std::cout << "Client " << j << ":\n";
         std::cout << "\tID: " << i.second.id << "\n";
         std::cout << "\tIP: " << i.second.ip_addr << "\n";
@@ -315,11 +269,4 @@ void registerParticipant(std::string input) {
 
     // store participant threadB socket to hash table
     client_table[id].threadBsocket = sockfd2;
-
-/*
-    //store sockfd2 in some global queue
-    pthread_mutex_lock(&message_mutex);
-    message_queue.push(sockfd2);
-    pthread_mutex_unlock(&message_mutex);
-*/
 }

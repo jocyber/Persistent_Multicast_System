@@ -85,18 +85,14 @@ std::string getIP(void) {
 }
 
 void deregisterParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
-    // create threadB
-    pthread_create(&tid, NULL, acceptMessages, (void*) &args);
-    
-    std::cout << "Participant Id: " << id << " deregister" << "\n";
-    
-    std::string message = input + " " + std::to_string(id) + " " + "participant";
-    send(sock, message.c_str(), message.length(), 0);
-
+    ;
 }
 void disconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
+    ;
 }
-void reconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args){
+void reconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
+    ;
 }
-void msendParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args){
+void msendParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
+    ;
 }
