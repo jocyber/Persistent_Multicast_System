@@ -1,7 +1,7 @@
 #include "part_functions.h"
 
 std::unordered_map<std::string, int> codes = {
-    {"register", 1}, {"deregister", 2}
+    {"register", 1}, {"deregister", 2}, {"disconnect", 3}, {"reconnect", 4}, {"msend", 5}
 };
 
 void errexit(const std::string message) {
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
         std::string command = "";
 
         //parse the command sent in
-        for(unsigned int i = 0; input[i] != ' ' && input[i] != '\0'; ++i)
+        for(unsigned int i = 0; input[i] != ' ' && i < input.length(); ++i)
             command += input[i];
         option = codes[command];
 
@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
                 registerParticipant(input, sockfd, id, tid, args);
                 break;
             case 2: { //deregister
-                //send if to make operation on coordinator more efficient
+                //send id to make operation on coordinator more efficient
                 const std::string message = input + " " + std::to_string(id);
 
                 if(send(sockfd, message.c_str(), message.length(), 0) == -1)
@@ -67,12 +67,21 @@ int main(int argc, char* argv[]) {
 
                 break;
             }
-            case 3: //disconnect
+            case 3: { //disconnect
+                const std::string message = input + " " + std::to_string(id);
+
+                if(send(sockfd, message.c_str(), message.length(), 0) == -1)
+                    std::cerr << "Unable to send command 'deregister' to the coordinator.\n";
+
                 break;
-            case 4: //reconnect
+            }
+            case 4: { //reconnect
+
                 break;
-            case 5: //msend
+            }
+            case 5: { //msend
                 break;
+            }
             default:
                 std::cerr << "Command not known.\n";
         }

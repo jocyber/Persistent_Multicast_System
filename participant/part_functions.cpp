@@ -53,7 +53,7 @@ void* acceptMessages(void* args) {
 
             //output the multicast message to the file
             file << buffer;
-            break; //only here for testing
+            //break; //only here for testing
         }
     }
 
@@ -95,14 +95,4 @@ std::string getIP(void) {
 
     fclose(fpntr);
     return IP;
-}
-
-void disconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
-    ;
-}
-void reconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
-    ;
-}
-void msendParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
-    ;
 }

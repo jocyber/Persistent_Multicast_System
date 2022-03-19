@@ -173,12 +173,16 @@ void handleRequest(int clientSock) {
                 close(client_table[id].threadBsocket);//close the socket
                 client_table.erase(id);//remove participant from table
 
-                std::cout << "Participant with id " + std::to_string(id) + " has been removed.\n";
-
                 break;
             }
             
             case 3: { //disconnect
+                int id = std::stoi(input.substr(11, input.length()));//get id
+                const std::string end = "CLOSE";
+
+                send(client_table[id].threadBsocket, end.c_str(), end.length(), 0); //send message to thread B
+                close(client_table[id].threadBsocket);//close the socket
+                client_table[id].online = false;
                 break;
             }
             
@@ -218,7 +222,7 @@ void printPartInfo() {
         std::cout << "\tOnline: " << i.second.online << "\n";
         std::cout << "\tMailbox Length: " << i.second.participant_mailbox.size() << "\n\n";
     }
-    std::cout << "____________________________________________";
+    std::cout << "____________________________________________\n";
 }
 
 void registerParticipant(const std::string &input) {//return the id
@@ -248,11 +252,10 @@ void registerParticipant(const std::string &input) {//return the id
         i++;
     }
 
-    // set client_table values
-    client_table[id].id = id;
-    client_table[id].port = port_num;
-    client_table[id].ip_addr = ip_addr;
-    client_table[id].online = true;
+    if(client_table.find(id) != client_table.end()) {
+        std::cerr << "Participant has already registered.\n";
+        return;
+    }
 
     // connect to thread B in the participant
     int sockfd2;
@@ -272,5 +275,12 @@ void registerParticipant(const std::string &input) {//return the id
         errexit("Could not connect to remote host on thread B.");
 
     // store participant threadB socket to hash table
+    // set client_table values
+    pthread_mutex_lock(&message_mutex);
+    client_table[id].id = id;
+    client_table[id].port = port_num;
+    client_table[id].ip_addr = ip_addr;
+    client_table[id].online = true;
     client_table[id].threadBsocket = sockfd2;
+    pthread_mutex_unlock(&message_mutex);
 }

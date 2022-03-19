@@ -24,10 +24,6 @@ struct Parameters {
 //prototypes
 void* acceptMessages(void* args);
 std::string getIP(void);
-
 void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args);
-void disconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args);
-void reconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args);
-void msendParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args);
 
 #endif
