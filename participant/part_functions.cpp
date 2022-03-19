@@ -1,6 +1,7 @@
 #include "part_functions.h"
 #include <unistd.h>
 #include <netdb.h>
+#include <string.h>
 
 void* acceptMessages(void* args) {
     int sockfd;
@@ -43,10 +44,15 @@ void* acceptMessages(void* args) {
             //should also parse to know when it needs to terminate
             recv(sockCoordinator, buffer, BUFFSIZE, 0);
 
+            if(strcmp(buffer, "CLOSE") == 0) {
+                close(sockCoordinator);
+                file.close();
+
+                pthread_exit(0);
+            }
+
             //output the multicast message to the file
             file << buffer;
-            file.close();// dont close the file, should be open always listening until the client dissconects with the disconect method
-            close(sockCoordinator);
             break; //only here for testing
         }
     }
@@ -59,7 +65,7 @@ void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, s
     // get port number
     int port = std::stoi(input.substr(8, input.length()));
     args.port = port;
-    
+
     // create threadB
     int status = pthread_create(&tid, NULL, acceptMessages, (void*) &args);
     if(status != 0) {

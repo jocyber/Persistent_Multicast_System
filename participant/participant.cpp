@@ -59,12 +59,6 @@ int main(int argc, char* argv[]) {
                 registerParticipant(input, sockfd, id, tid, args);
                 break;
             case 2: { //deregister
-                int status = pthread_cancel(tid);
-                if(status == -1) {
-                    std::cerr << "Unable to cancel thread B.\n";
-                    break;
-                }
-
                 //send if to make operation on coordinator more efficient
                 const std::string message = input + " " + std::to_string(id);
 

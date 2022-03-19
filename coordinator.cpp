@@ -167,6 +167,10 @@ void handleRequest(int clientSock) {
 
             case 2: { //deregister
                 int id = std::stoi(input.substr(11, input.length()));//get id
+                const std::string end = "CLOSE";
+
+                send(client_table[id].threadBsocket, end.c_str(), end.length(), 0); //send message to thread B
+                close(client_table[id].threadBsocket);//close the socket
                 client_table.erase(id);//remove participant from table
 
                 std::cout << "Participant with id " + std::to_string(id) + " has been removed.\n";
