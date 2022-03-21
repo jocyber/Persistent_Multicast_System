@@ -25,5 +25,6 @@ struct Parameters {
 void* acceptMessages(void* args);
 std::string getIP(void);
 void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args);
+void reconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args);
 
 #endif

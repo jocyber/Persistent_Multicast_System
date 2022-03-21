@@ -20,6 +20,7 @@ void handleRequest(int clientSock);
 void* worker_thread(void* arg);
 void printPartInfo();
 void registerParticipant(const std::string &input);
+void reconnectParticipant(const std::string &input);
 
 //information on the participants in the multicast system
 typedef struct participant_info {                                  // id number of participant
@@ -187,6 +188,7 @@ void handleRequest(int clientSock) {
             }
             
             case 4: { //reconnect
+                reconnectParticipant(input);
                 break;      
             }
             case 5: { //msend
@@ -298,4 +300,62 @@ void registerParticipant(const std::string &input) {//return the id
     client_table[id].online = true;
     client_table[id].threadBsocket = sockfd2;
     pthread_mutex_unlock(&message_mutex);
+}
+
+void reconnectParticipant(const std::string &input) {//return the id
+    std::string parameter = "", ip_addr;
+    unsigned int i = 10, id, port_num;
+
+    unsigned short int turn = 1;
+
+    //parse id first, then port, then ip_address
+    while(i < input.length()) {
+        for(;input[i] != ' ' && i < input.length(); ++i)
+            parameter += input[i];
+
+        switch(turn) {
+            case 1:
+                port_num = std::stoi(parameter);
+                break;
+            case 2:
+                id = std::stoi(parameter);
+                break;
+            case 3:
+                ip_addr = parameter;
+        }
+
+        parameter.clear();
+        turn++;
+        i++;
+    }
+
+    if(client_table.find(id) == client_table.end()) {
+        // connect to thread B in the participant
+        int sockfd2;
+        if((sockfd2 = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+            errexit("Failed to create the socket for thread B.");
+    
+        struct sockaddr_in addr;
+        memset((struct sockaddr_in *) &addr, '\0', sizeof(addr));
+    
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port_num);
+        addr.sin_addr.s_addr = INADDR_ANY;
+    
+        //send it back to the IP address it came from. If participants are on the same machine,
+        //it will differentiate between them based on the port number
+        if(connect(sockfd2, (struct sockaddr*) &addr, sizeof(addr)) == -1)
+            errexit("Could not connect to remote host on thread B.");
+    
+        // store participant threadB socket to hash table
+        // set client_table values
+        pthread_mutex_lock(&message_mutex);
+        client_table[id].id = id;
+        client_table[id].port = port_num;
+        client_table[id].ip_addr = ip_addr;
+        client_table[id].online = true;
+        client_table[id].threadBsocket = sockfd2;
+        pthread_mutex_unlock(&message_mutex);
+        return;
+    } 
 }

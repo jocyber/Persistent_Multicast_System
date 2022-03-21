@@ -89,6 +89,27 @@ void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, s
     // send data
 }
 
+void reconnectParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
+    // get port number
+    int port = std::stoi(input.substr(9, input.length()));
+    args.port = port;
+
+    // create threadB
+    int status = pthread_create(&tid, NULL, acceptMessages, (void*) &args);
+    if(status != 0) {
+        std::cerr << "Failed to create thread B.\n";
+        return;
+    }
+    
+    std::string ip = getIP();
+    // create data to send
+    std::cout << "Id: " << id << " IP: " << ip << " Port: " << port << "\n";
+
+    std::string message = input + " " + std::to_string(id) + " " + ip;
+    send(sock, message.c_str(), message.length(), 0);
+    // send data
+}
+
 std::string getIP(void) {
     FILE *fpntr = popen("hostname -I", "r");
 
