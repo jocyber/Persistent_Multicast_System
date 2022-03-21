@@ -218,6 +218,8 @@ void handleRequest(int clientSock) {
                             break;
                         }
                     }
+
+                    client_table[id].participant_mailbox.pop();
                 }
 
                 //send message all messages in the mailbox queue to this participant
