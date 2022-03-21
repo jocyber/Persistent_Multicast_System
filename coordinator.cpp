@@ -11,6 +11,13 @@
 #include <queue>
 #include <semaphore.h>
 #include <list>
+#include <chrono>//time library
+
+//auto start = std::chrono::system_clock::now();
+//code
+//auto end = std::chrono::system_clock::now();
+//std::chrono::duration<double> elapsed = end - start;
+//if(elapsed >= td) send message
 
 #define THREAD_COUNT 10
 #define BUFFSIZE 1000
@@ -20,14 +27,20 @@ void handleRequest(int clientSock);
 void* worker_thread(void* arg);
 void printPartInfo();
 void registerParticipant(const std::string &input);
+void reconnectParticipant(const std::string &input);
+
+struct message {
+    std::string mail;
+    std::chrono::time_point<std::chrono::system_clock> arrival_time;
+};
 
 //information on the participants in the multicast system
 typedef struct participant_info {                                  // id number of participant
-    int port, id;                                   // port of threadB on participant
+    int port;                                   // port of threadB on participant
     std::string ip_addr;                        // ip address of participant
     int threadBsocket;                          // file descriptor for threadB socket
     bool online = false;                         // boolean if participant is online or offline
-    std::queue<std::string> participant_mailbox;        // mailbox to store messages when offline
+    std::queue<message> participant_mailbox;        // mailbox to store messages when offline
 } participant_info;
 
 
@@ -43,6 +56,9 @@ sem_t sem_full;
 sem_t sem_empty;
 pthread_mutex_t mutex;
 pthread_mutex_t message_mutex;
+
+//temporal persistance constant
+const std::chrono::milliseconds td(60000); //60 seconds
 
 int main(int argc, char* argv[]) 
 {
@@ -177,7 +193,7 @@ void handleRequest(int clientSock) {
             }
             
             case 3: { //disconnect
-                int id = std::stoi(input.substr(11, input.length()));//get id
+                int id = std::stoi(input.substr(12, input.length()));//get id
                 const std::string end = "CLOSE";
 
                 send(client_table[id].threadBsocket, end.c_str(), end.length(), 0); //send message to thread B
@@ -187,6 +203,24 @@ void handleRequest(int clientSock) {
             }
             
             case 4: { //reconnect
+                int id = std::stoi(input.substr(11, input.length()));//get id
+                reconnectParticipant(input);
+
+                //send all the messages within the td time to the reconnected participant
+                while(!client_table[id].participant_mailbox.empty()) {
+                    std::string front_message = client_table[id].participant_mailbox.front().mail;
+                    auto now_time = std::chrono::system_clock::now();
+                    std::chrono::duration<double> elapsed = now_time - client_table[id].participant_mailbox.front().arrival_time;
+                    
+                    if(elapsed <= td) {//if the time passed since the message was sent is within the temporal persistence time
+                        if(send(client_table[id].threadBsocket, front_message.c_str(), front_message.length(), 0) == -1) {
+                            std::cerr << "Failed to send stored message to ID: " << id << '\n';
+                            break;
+                        }
+                    }
+                }
+
+                //send message all messages in the mailbox queue to this participant
                 break;      
             }
             case 5: { //msend
@@ -198,10 +232,14 @@ void handleRequest(int clientSock) {
                         if(send(x.second.threadBsocket, multicast_message.c_str(), multicast_message.length(), 0) == -1) {
                             std::cerr << "Failed to send multicast message to ID: " << x.first << '\n';
                             break;
-                        }        
+                        }
                     }
                     else {
-                        x.second.participant_mailbox.push(multicast_message);
+                        struct message mail;
+                        mail.mail = multicast_message;
+                        mail.arrival_time = std::chrono::system_clock::now();//current time
+
+                        x.second.participant_mailbox.push(mail);
                     }
                 }
 
@@ -240,7 +278,7 @@ void printPartInfo() {
     std::cout << "____________________________________________\n";
 }
 
-void registerParticipant(const std::string &input) {//return the id
+void registerParticipant(const std::string &input) {
     std::string parameter = "", ip_addr;
     unsigned int i = 9, id, port_num;
 
@@ -292,10 +330,62 @@ void registerParticipant(const std::string &input) {//return the id
     // store participant threadB socket to hash table
     // set client_table values
     pthread_mutex_lock(&message_mutex);
-    client_table[id].id = id;
     client_table[id].port = port_num;
     client_table[id].ip_addr = ip_addr;
     client_table[id].online = true;
     client_table[id].threadBsocket = sockfd2;
     pthread_mutex_unlock(&message_mutex);
+}
+
+void reconnectParticipant(const std::string &input) {
+    std::string parameter = "", ip_addr;
+    unsigned int i = 10, id, port_num;
+
+    unsigned short int turn = 1;
+
+    //parse id first, then port, then ip_address
+    while(i < input.length()) {
+        for(;input[i] != ' ' && i < input.length(); ++i)
+            parameter += input[i];
+
+        switch(turn) {
+            case 1:
+                port_num = std::stoi(parameter);
+                break;
+            case 2:
+                id = std::stoi(parameter);
+                break;
+            case 3:
+                ip_addr = parameter;
+        }
+
+        parameter.clear();
+        turn++;
+        i++;
+    }
+
+    if(client_table.find(id) != client_table.end()) {//if id exists
+        // connect to thread B in the participant
+        int sockfd2;
+        if((sockfd2 = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+            errexit("Failed to create the socket for thread B.");
+    
+        struct sockaddr_in addr;
+        memset((struct sockaddr_in *) &addr, '\0', sizeof(addr));
+    
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port_num);
+        addr.sin_addr.s_addr = INADDR_ANY;
+    
+        //send it back to the IP address it came from. If participants are on the same machine,
+        //it will differentiate between them based on the port number
+        if(connect(sockfd2, (struct sockaddr*) &addr, sizeof(addr)) == -1)
+            errexit("Could not connect to remote host on thread B.");
+    
+        // store participant threadB socket to hash table
+        pthread_mutex_lock(&message_mutex);
+        client_table[id].online = true;
+        pthread_mutex_unlock(&message_mutex);
+        return;
+    } 
 }

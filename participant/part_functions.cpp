@@ -45,6 +45,7 @@ void* acceptMessages(void* args) {
             memset(buffer, '\0', BUFFSIZE);
             //wait for messages from the coordinator
             //should also parse to know when it needs to terminate
+
             recv(sockCoordinator, buffer, BUFFSIZE, 0);
 
             if(strcmp(buffer, "CLOSE") == 0) {
@@ -59,8 +60,8 @@ void* acceptMessages(void* args) {
             }
 
             //output the multicast message to the file
-            file << buffer;
             //break; //only here for testing
+            file << buffer;
         }
     }
 

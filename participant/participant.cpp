@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
                 break;
             }
             case 4: { //reconnect
-
+                registerParticipant(input, sockfd, id, tid, args);
                 break;
             }
             case 5: { //msend
