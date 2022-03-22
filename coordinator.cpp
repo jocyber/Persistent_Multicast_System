@@ -197,8 +197,11 @@ void handleRequest(int clientSock) {
                 const std::string end = "CLOSE";
 
                 send(client_table[id].threadBsocket, end.c_str(), end.length(), 0); //send message to thread B
+
+                pthread_mutex_lock(&message_mutex);
                 close(client_table[id].threadBsocket);//close the socket
                 client_table[id].online = false;
+                pthread_mutex_unlock(&message_mutex);
                 break;
             }
             
@@ -219,10 +222,14 @@ void handleRequest(int clientSock) {
                         }
                     }
 
+                    pthread_mutex_lock(&message_mutex);
                     client_table[id].participant_mailbox.pop();
+                    pthread_mutex_unlock(&message_mutex);
                 }
 
-                //send message all messages in the mailbox queue to this participant
+                pthread_mutex_lock(&message_mutex);
+                client_table[id].online = true;
+                pthread_mutex_unlock(&message_mutex);
                 break;      
             }
             case 5: { //msend
@@ -241,7 +248,9 @@ void handleRequest(int clientSock) {
                         mail.mail = multicast_message;
                         mail.arrival_time = std::chrono::system_clock::now();//current time
 
+                        pthread_mutex_lock(&message_mutex);
                         x.second.participant_mailbox.push(mail);
+                        pthread_mutex_unlock(&message_mutex);
                     }
                 }
 
@@ -385,9 +394,5 @@ void reconnectParticipant(const std::string &input) {
             errexit("Could not connect to remote host on thread B.");
     
         // store participant threadB socket to hash table
-        pthread_mutex_lock(&message_mutex);
-        client_table[id].online = true;
-        pthread_mutex_unlock(&message_mutex);
-        return;
     } 
 }
