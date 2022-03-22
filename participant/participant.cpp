@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
                 const std::string message = input + " " + std::to_string(id);
 
                 if(send(sockfd, message.c_str(), message.length(), 0) == -1)
-                    std::cerr << "Unable to send command 'deregister' to the coordinator.\n";
+                    std::cerr << "Unable to send command 'disconnect' to the coordinator.\n";
 
                 break;
             }
@@ -80,11 +80,25 @@ int main(int argc, char* argv[]) {
                 break;
             }
             case 5: { //msend
+                // get message and setup command to send to coordinator
+                std::string message = input.substr(6, input.length());
+                std::string coordMessage = command + " " + std::to_string(id) + " " + message;
+
+                // write to file
+                std::fstream file(logFile, std::ios::app);//append to the file
+                file << message << "\n";
+                file.close();
+
+                // send command to server
+                if(send(sockfd, coordMessage.c_str(), coordMessage.length(), 0) == -1)
+                    std::cerr << "Unable to send command 'deregister' to the coordinator.\n";
+
                 break;
             }
             default:
                 std::cerr << "Command not known.\n";
         }
+        // block for ACK
 
         close(sockfd);
     }

@@ -9,8 +9,6 @@ void* acceptMessages(void* args) {
     int port = ((struct Parameters*)args)->port;
 
     char buffer[BUFFSIZE];
-    std::fstream file(logFile, std::ios::app);//append to the file
-
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         std::cerr << "Could not create socket for thread B.\n";
         pthread_exit(0);
@@ -40,29 +38,26 @@ void* acceptMessages(void* args) {
         pthread_exit(0);
     }
 
-    if(file.is_open()) {
-        while(true) {
-            memset(buffer, '\0', BUFFSIZE);
-            //wait for messages from the coordinator
-            //should also parse to know when it needs to terminate
+    while(true) {
+        memset(buffer, '\0', BUFFSIZE);
+        //wait for messages from the coordinator
+        //should also parse to know when it needs to terminate
 
-            recv(sockCoordinator, buffer, BUFFSIZE, 0);
+        recv(sockCoordinator, buffer, BUFFSIZE, 0);
+        if(strcmp(buffer, "CLOSE") == 0) {
+            int opt = 0;
+            setsockopt(sockfd, IPPROTO_TCP, SO_REUSEADDR, &opt, sizeof(opt));
 
-            if(strcmp(buffer, "CLOSE") == 0) {
-                int opt = 0;
-                setsockopt(sockfd, IPPROTO_TCP, SO_REUSEADDR, &opt, sizeof(opt));
+            close(sockfd);
+            close(sockCoordinator);
 
-                close(sockfd);
-                close(sockCoordinator);
-
-                file.close();
-                pthread_exit(0);
-            }
-
-            //output the multicast message to the file
-            //break; //only here for testing
-            file << buffer;
+            pthread_exit(0);
         }
+
+        //output the multicast message to the file
+        std::fstream file(logFile, std::ios::app);//append to the file
+        file << buffer << "\n";
+        file.close();
     }
 
     //here for testing
@@ -83,14 +78,12 @@ void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, s
     
     std::string ip = getIP();
     // create data to send
-    std::cout << "Id: " << id << " IP: " << ip << " Port: " << port << "\n";
-
     std::string message = input + " " + std::to_string(id) + " " + ip;
     send(sock, message.c_str(), message.length(), 0);
     // send data
 }
 
-std::string getIP(void) {
+    std::string getIP(void) {
     FILE *fpntr = popen("hostname -I", "r");
 
     char buffer[20];
