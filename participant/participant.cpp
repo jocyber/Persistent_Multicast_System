@@ -99,6 +99,11 @@ int main(int argc, char* argv[]) {
                 std::cerr << "Command not known.\n";
         }
         // block for ACK
+        char ack[3];
+        recv(sockfd, ack, sizeof(ack), 0);
+        if(strcmp(ack, "ACK") != 0) {
+            std::cerr << "Command error on coordinator.\n";
+        }
 
         close(sockfd);
     }

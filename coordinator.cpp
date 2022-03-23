@@ -277,7 +277,9 @@ void handleRequest(int clientSock) {
             }
         }
         // send ACK to client
-        
+        if(send(clientSock, "ACK", 3, 0) == -1)
+            std::cerr << "Failed to send ACK to client." << '\n';
+
         // close socket
         if(close(clientSock) == -1)
             throw "Error in closing the socket file descriptor.";
