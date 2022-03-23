@@ -66,8 +66,16 @@ void* acceptMessages(void* args) {
 
 void registerParticipant(std::string &input, int sock, int id, pthread_t &tid, struct Parameters args) {
     // get port number
-    int port = std::stoi(input.substr(8, input.length()));
-    args.port = port;
+    // check if reconnect or register by checking first letter
+    int pos = input.find(" ");
+    if(input.substr(0, pos) == "register") {
+        int port = std::stoi(input.substr(8, input.length()));
+        args.port = port;
+    } else {
+        int port = std::stoi(input.substr(9, input.length()));
+        args.port = port;
+    }
+
 
     // create threadB
     int status = pthread_create(&tid, NULL, acceptMessages, (void*) &args);

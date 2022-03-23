@@ -27,7 +27,7 @@ void handleRequest(int clientSock);
 void* worker_thread(void* arg);
 void printPartInfo();
 void registerParticipant(const std::string &input);
-void reconnectParticipant(const std::string &input);
+void reconnectParticipant(const std::string &input, int &id);
 
 struct message {
     std::string mail;
@@ -189,14 +189,13 @@ void handleRequest(int clientSock) {
                 send(client_table[id].threadBsocket, end.c_str(), end.length(), 0); //send message to thread B
                 close(client_table[id].threadBsocket);//close the socket
                 client_table.erase(id);//remove participant from table
-printPartInfo();
+                    printPartInfo();
                 break;
             }
             
             case 3: { //disconnect
                 std::string sid = input.substr(10, input.length());
                 int id = std::stoi(sid);//get id
-                std::cout << "Dissconecting: " << sid << "\n";
                 const std::string end = "CLOSE";
 
                 send(client_table[id].threadBsocket, end.c_str(), end.length(), 0); //send message to thread B
@@ -205,13 +204,13 @@ printPartInfo();
                 close(client_table[id].threadBsocket);//close the socket
                 client_table[id].online = false;
                 pthread_mutex_unlock(&message_mutex);
-printPartInfo();
+                printPartInfo();
                 break;
             }
             
             case 4: { //reconnect
                 int id = std::stoi(input.substr(11, input.length()));//get id
-                reconnectParticipant(input);
+                reconnectParticipant(input, id);
 
                 //send all the messages within the td time to the reconnected participant
                 while(!client_table[id].participant_mailbox.empty()) {
@@ -229,13 +228,13 @@ printPartInfo();
                     pthread_mutex_lock(&message_mutex);
                     client_table[id].participant_mailbox.pop();
                     pthread_mutex_unlock(&message_mutex);
-printPartInfo();
                 }
 
                 // put client back online
                 pthread_mutex_lock(&message_mutex);
                 client_table[id].online = true;
                 pthread_mutex_unlock(&message_mutex);
+                printPartInfo();
                 break;      
             }
             case 5: { //msend
@@ -273,7 +272,7 @@ printPartInfo();
                         }
                     }
                 }
-printPartInfo();
+                printPartInfo();
                 break;
             }
         }
@@ -296,18 +295,16 @@ printPartInfo();
 
 // function to check the contents of participant_info for testing
 void printPartInfo() {
-    int j = 1;
     std::cout << "\n";
     std::cout << "Client Table:\n";
     std::cout << "____________________________________________\n";
 
     for(const auto &i: client_table) {
-        std::cout << "Client " << j << ":\n";
+        std::cout << "Client " << i.first << ":\n";
         std::cout << "\tIP: " << i.second.ip_addr << "\n";
         std::cout << "\tPort: " << i.second.port << "\n";
         std::cout << "\tOnline: " << i.second.online << "\n";
         std::cout << "\tMailbox Length: " << i.second.participant_mailbox.size() << "\n\n";
-        j++;
     }
     std::cout << "____________________________________________\n";
 }
@@ -372,9 +369,9 @@ void registerParticipant(const std::string &input) {
     pthread_mutex_unlock(&message_mutex);
 }
 
-void reconnectParticipant(const std::string &input) {
+void reconnectParticipant(const std::string &input, int &id) {
     std::string parameter = "", ip_addr;
-    unsigned int i = 10, id, port_num;
+    unsigned int i = 10, port_num;
 
     unsigned short int turn = 1;
 
