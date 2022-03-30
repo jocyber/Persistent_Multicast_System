@@ -9,7 +9,7 @@ void errexit(const std::string message) {
     exit(EXIT_FAILURE);
 }
 
-int connectToCoor(int portCoordinator);
+int connectToCoor(int portCoordinator, std::string coorIP);
 
 int main(int argc, char* argv[]) {
 
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
             command += input[i];
         option = codes[command];
 
-        int sockfd = connectToCoor(portCoordinator);//connect to remote host
+        int sockfd = connectToCoor(portCoordinator, ipCoordinator);//connect to remote host
 
         switch(option) {
             case 1:// register
@@ -97,6 +97,8 @@ int main(int argc, char* argv[]) {
             }
             default:
                 std::cerr << "Command not known.\n";
+                close(sockfd);
+                continue;
         }
         // block for ACK
         char ack[3];
@@ -111,14 +113,14 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
 }
 
-int connectToCoor(int portCoordinator) {
+int connectToCoor(int portCoordinator, std::string coorIP) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in addr;
     memset((struct sockaddr*) &addr, '\0', sizeof(addr));
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(portCoordinator);
-    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_addr.s_addr = inet_addr(coorIP.c_str());
 
     // connect to the coordinator
     if(connect(sockfd, (struct sockaddr*) &addr, sizeof(addr)) == -1)

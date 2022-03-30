@@ -353,7 +353,7 @@ void registerParticipant(const std::string &input) {
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port_num);
-    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_addr.s_addr = inet_addr(ip_addr.c_str());
 
     //send it back to the IP address it came from. If participants are on the same machine,
     //it will differentiate between them based on the port number
@@ -409,7 +409,7 @@ void reconnectParticipant(const std::string &input, int &id) {
     
         addr.sin_family = AF_INET;
         addr.sin_port = htons(port_num);
-        addr.sin_addr.s_addr = INADDR_ANY;
+        addr.sin_addr.s_addr = inet_addr(ip_addr.c_str());
     
         //send it back to the IP address it came from. If participants are on the same machine,
         //it will differentiate between them based on the port number
